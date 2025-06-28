@@ -68,8 +68,6 @@ def app():
 app()
 
 ### DATA
-FILEPATH = 'HR_Analytics.csv'
-df = load_data(FILEPATH)
 def load_data(filepath):
     '''
     Loads the .csv file at filepath, renames columns, and drops duplicates.
@@ -89,7 +87,8 @@ def load_data(filepath):
     df.rename(columns=new_col_names, inplace=True)
     df = df.drop_duplicates()
     return df
-
+FILEPATH = 'HR_Analytics.csv'
+df = load_data(FILEPATH)
 #### SPLIT DATA
 def split_data(df):
     '''
@@ -110,7 +109,8 @@ def split_data(df):
     X = df_dummies.drop('left', axis=1)
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=123)
     return df_dummies, X_train, X_test, y_train, y_test
-###
+
+######### XGB MODEL
 
 st.subheader('XGBOOST')
 code = '''
@@ -126,20 +126,8 @@ xgb= XGBClassifier(
 '''
 st.code(code, language='python')
 xgb, y_pred_xgb = util.get_xgb(df_dummies, X_train, X_test, y_train)
-col1, col2 = st.columns(2)
-with col1:
-    st_table(get_rf_report())
-    st_table(get_rf_metrics())
-with col2:
-    st_plot(plot_confusion_matrix(y_test, y_pred_xgb, xgb, 'XGB Confusion Matrix'))
-st.write('''
-    The XGB performed very well despite the imbalance in data. Additionally, training and validation metric 
-    scores are very close indicating that the model isn't overfitting and the model predicted significantly less false 
-    positives compared to the decision tree.
-''')
-st_plot(plot_roc(y_test, y_pred_xgb))
 
-###
+######### PREDICTION
 
 prediction = xgb.predict(user_df)
 if prediction == 1:
