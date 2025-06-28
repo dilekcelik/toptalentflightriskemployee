@@ -1,23 +1,19 @@
 import pandas as pd
 import streamlit as st
-
-import sklearn
-
 from sklearn.model_selection import train_test_split
 from xgboost import XGBClassifier
 from sklearn.metrics import classification_report, accuracy_score, precision_score, f1_score, recall_score
 
+# App title
+st.title('Employee Retention Prediction App')
 
-st.title('Employee Retention Prediction')
-
-################
-
+# Sidebar for user input
 def app():
     '''
-    Streamlit UI for predicting whether a employee will leave or not based on the XGB model.
+    Streamlit UI for predicting whether an employee will leave or not based on the XGB model.
     '''
     departments = {
-        'IT': 'department_IT',	
+        'IT': 'department_IT',
         'RandD': 'department_RandD',
         'Accounting': 'department_accounting',
         'HR': 'department_hr',
@@ -27,32 +23,34 @@ def app():
         'Sales': 'department_sales',
         'Support': 'department_support',
         'Technical': 'department_technical',
-    }	
+    }
+
     salaries = {
         'Low': 'salary_low',
         'Medium': 'salary_medium',
         'High': 'salary_high',
     }
 
-    col1, col2, col3, col4= st.columns(4)
+    col1, col2, col3, col4 = st.columns(4)
     with col1:
         sat_lvl = st.number_input('Satisfaction Level', min_value=0.0, max_value=1.0, value=0.5)
-        tenure = st.number_input('Tenure', min_value=0, max_value=100, value=2)
+        tenure = st.number_input('Tenure (Years)', min_value=0, max_value=100, value=2)
     with col2:
-        last_eval = st.number_input('Last Evaluation', min_value=0.0, max_value=1.0, value=0.5)
+        last_eval = st.number_input('Last Evaluation Score', min_value=0.0, max_value=1.0, value=0.5)
         dept = st.selectbox('Department', departments.keys())
     with col3:
-        num_proj = st.number_input('Number Projects', min_value=2, max_value=7, value=4)
-        sal = st.selectbox('Salary', salaries.keys(), index=1)
+        num_proj = st.number_input('Number of Projects', min_value=2, max_value=7, value=4)
+        sal = st.selectbox('Salary Level', salaries.keys(), index=1)
     with col4:
         ave_hours = st.number_input('Average Monthly Hours', min_value=0, max_value=744, value=180)
-        work_acc = st.checkbox('Work Accident')
-        promo = st.checkbox('Promotion in the Last 5 Years')
+        work_acc = st.checkbox('Had Work Accident?')
+        promo = st.checkbox('Promoted in Last 5 Years?')
 
+    # Build input DataFrame
     user_df = pd.DataFrame({
         'satisfaction_level': sat_lvl,
         'last_evaluation': last_eval,
-        'number_project': num_proj, 
+        'number_project': num_proj,
         'average_monthly_hours': ave_hours,
         'tenure': tenure,
         'work_accident': int(work_acc),
@@ -61,7 +59,7 @@ def app():
         'department_RandD': 0,
         'department_accounting': 0,
         'department_hr': 0,
-        'department_management': 0, 
+        'department_management': 0,
         'department_marketing': 0,
         'department_product_mng': 0,
         'department_sales': 0,
@@ -71,108 +69,68 @@ def app():
         'salary_low': 0,
         'salary_medium': 0,
     }, index=[0])
+
+    # One-hot encode department and salary
     user_df[departments[dept]] = 1
     user_df[salaries[sal]] = 1
-app()
 
-################ DATA
+    return user_df
 
+#####################
+# Load and prepare data
 def load_data(filepath):
-    '''
-    Loads the .csv file at filepath, renames columns, and drops duplicates.
-
-    Args:
-        filepath (string)
-    Returns:
-        df (DataFrame): Cleaned DataFrame of .csv data.
-    '''
     df = pd.read_csv(filepath)
-    new_col_names = {
+    df.rename(columns={
         'average_montly_hours': 'average_monthly_hours',
         'time_spend_company': 'tenure',
         'Work_accident': 'work_accident',
         'Department': 'department'
-    }
-    df.rename(columns=new_col_names, inplace=True)
-    df = df.drop_duplicates()
+    }, inplace=True)
+    df.drop_duplicates(inplace=True)
     return df
 
-df = load_data('HR_Analytics.csv')
-
-################ SPLIT DATA
-
 def split_data(df):
-    '''
-    Splits the input data for model training. Target is the left column while everything else
-    is a feature.
-
-    Args:
-        df (DataFrame)
-    Returns:
-        df_dummies (DataFrame): Input df with label encoding.
-        X_train (DataFrame): 80% of feature data.
-        X_test (DataFrame): 20% of feature data reserved for model validation.
-        y_train (DataFrame): 80% of taget data.
-        y_test (DataFrame): 20% of target data reserved for model validation.
-    '''
     df_dummies = pd.get_dummies(df)
-    y = df_dummies.left
+    y = df_dummies['left']
     X = df_dummies.drop('left', axis=1)
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=123)
     return df_dummies, X_train, X_test, y_train, y_test
 
-################ XGB MODEL
-st.subheader('XGBOOST')
-
-code = '''
-xgb= XGBClassifier(
-    learning_rate=0.05,
-    max_depth=3,
-    subsample=0.8,
-    colsample_bytree=0.8,
-    n_estimators=xgb_model.best_iteration,
-    use_label_encoder=False,
-    eval_metric='logloss'
-)
-'''
-st.code(code, language='python')
-
-def get_xgb(df, X_train, X_test, y_train):
-    '''
-    Trains, fits, and predicts a XGB model.
-
-    Args:
-        df (DataFrame)
-        X_train (DataFrame)
-        X_test (DataFrame)
-        y_train (DataFrame)
-    Returns:
-        xgb
-        y_pred (DataFrame)
-    '''  
-    ######
-    from xgboost import XGBClassifier
+#####################
+# Train XGBoost Model
+def get_xgb(X_train, X_test, y_train):
     xgb = XGBClassifier(
-    learning_rate=0.05,
-    max_depth=3,
-    subsample=0.8,
-    colsample_bytree=0.8,
-    n_estimators=100,
-    use_label_encoder=False,
-    eval_metric='logloss'
+        learning_rate=0.05,
+        max_depth=3,
+        subsample=0.8,
+        colsample_bytree=0.8,
+        n_estimators=100,
+        use_label_encoder=False,
+        eval_metric='logloss'
     )
     xgb.fit(X_train, y_train)
     y_pred = xgb.predict(X_test)
     return xgb, y_pred
 
+#####################
+# Main logic
+
+# Load dataset
+df = load_data('HR_Analytics.csv')
 df_dummies, X_train, X_test, y_train, y_test = split_data(df)
-xgb, y_pred_xgb = get_xgb(df_dummies, X_train, X_test, y_train)
 
-################ PREDICTION
+# Train model
+xgb, y_pred = get_xgb(X_train, X_test, y_train)
 
-prediction = xgb.predict(user_df)
-if prediction == 1:
-    st.info('The employee is likely to leave the company.')
-elif prediction == 0:
-    st.info('The employee is likely to continue working at the company.')
+# Get user input
+user_df = app()
 
+# Prediction Button
+if st.button("Predict Employee Retention"):
+    # Match columns
+    user_df = user_df.reindex(columns=X_train.columns, fill_value=0)
+    prediction = xgb.predict(user_df)[0]
+    if prediction == 1:
+        st.warning("⚠️ The employee is likely to leave the company.")
+    else:
+        st.success("✅ The employee is likely to stay at the company.")
