@@ -65,10 +65,11 @@ def app():
     user_df[departments[dept]] = 1
     user_df[salaries[sal]] = 1
 
-    prediction = 1 #rf.predict(user_df)
-    if prediction == 1:
-        st.info('The employee is likely to leave the company.')
-    elif prediction == 0:
-        st.info('The employee is likely to continue working at the company.')
-
 app()
+
+prediction = 1 #rf.predict(user_df)
+if prediction == 1:
+    st.info('The employee is likely to leave the company.')
+elif prediction == 0:
+    st.info('The employee is likely to continue working at the company.')
+
