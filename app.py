@@ -151,7 +151,7 @@ def get_xgb(df, X_train, X_test, y_train):
         y_pred (DataFrame)
     '''  
     ######
-    
+    from xgboost import XGBClassifier
     xgb = XGBClassifier(
     learning_rate=0.05,
     max_depth=3,
