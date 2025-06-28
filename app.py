@@ -1,6 +1,7 @@
 import pandas as pd
 import streamlit as st
 from util import *
+from visualizations import *
 
 st.title('Employee Retention Prediction')
 
@@ -94,7 +95,7 @@ st.write('''
     scores are very close indicating that the model isn't overfitting and the model predicted significantly less false 
     positives compared to the decision tree.
 ''')
-#st_plot(plot_roc(y_test, y_pred_xgb))
+st_plot(plot_roc(y_test, y_pred_xgb))
 
 ###
 
