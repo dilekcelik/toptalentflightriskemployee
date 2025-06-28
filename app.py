@@ -1,136 +1,107 @@
-import pandas as pd
 import streamlit as st
+import pandas as pd
+import xgboost as xgb
+import matplotlib.pyplot as plt
+import seaborn as sns
+import joblib
 from sklearn.model_selection import train_test_split
-from xgboost import XGBClassifier
-from sklearn.metrics import classification_report, accuracy_score, precision_score, f1_score, recall_score
+from sklearn.preprocessing import LabelEncoder
 
-# App title
-st.title('Employee Retention Prediction App')
+# Title
+st.title("HR Analytics Dashboard with XGBoost Prediction")
 
-# Sidebar for user input
-def app():
-    '''
-    Streamlit UI for predicting whether an employee will leave or not based on the XGB model.
-    '''
-    departments = {
-        'IT': 'department_IT',
-        'RandD': 'department_RandD',
-        'Accounting': 'department_accounting',
-        'HR': 'department_hr',
-        'Management': 'department_management',
-        'Marketing': 'department_marketing',
-        'Product Management': 'department_product_mng',
-        'Sales': 'department_sales',
-        'Support': 'department_support',
-        'Technical': 'department_technical',
-    }
-
-    salaries = {
-        'Low': 'salary_low',
-        'Medium': 'salary_medium',
-        'High': 'salary_high',
-    }
-
-    col1, col2, col3, col4 = st.columns(4)
-    with col1:
-        sat_lvl = st.number_input('Satisfaction Level', min_value=0.0, max_value=1.0, value=0.5)
-        tenure = st.number_input('Tenure (Years)', min_value=0, max_value=100, value=2)
-    with col2:
-        last_eval = st.number_input('Last Evaluation Score', min_value=0.0, max_value=1.0, value=0.5)
-        dept = st.selectbox('Department', departments.keys())
-    with col3:
-        num_proj = st.number_input('Number of Projects', min_value=2, max_value=7, value=4)
-        sal = st.selectbox('Salary Level', salaries.keys(), index=1)
-    with col4:
-        ave_hours = st.number_input('Average Monthly Hours', min_value=0, max_value=744, value=180)
-        work_acc = st.checkbox('Had Work Accident?')
-        promo = st.checkbox('Promoted in Last 5 Years?')
-
-    # Build input DataFrame
-    user_df = pd.DataFrame({
-        'satisfaction_level': sat_lvl,
-        'last_evaluation': last_eval,
-        'number_project': num_proj,
-        'average_monthly_hours': ave_hours,
-        'tenure': tenure,
-        'work_accident': int(work_acc),
-        'promotion_last_5years': int(promo),
-        'department_IT': 0,
-        'department_RandD': 0,
-        'department_accounting': 0,
-        'department_hr': 0,
-        'department_management': 0,
-        'department_marketing': 0,
-        'department_product_mng': 0,
-        'department_sales': 0,
-        'department_support': 0,
-        'department_technical': 0,
-        'salary_high': 0,
-        'salary_low': 0,
-        'salary_medium': 0,
-    }, index=[0])
-
-    # One-hot encode department and salary
-    user_df[departments[dept]] = 1
-    user_df[salaries[sal]] = 1
-
-    return user_df
-
-#####################
-# Load and prepare data
-def load_data(filepath):
-    df = pd.read_csv(filepath)
-    df.rename(columns={
-        'average_montly_hours': 'average_monthly_hours',
-        'time_spend_company': 'tenure',
-        'Work_accident': 'work_accident',
-        'Department': 'department'
-    }, inplace=True)
-    df.drop_duplicates(inplace=True)
-    return df
-
-def split_data(df):
-    df_dummies = pd.get_dummies(df)
-    y = df_dummies['left']
-    X = df_dummies.drop('left', axis=1)
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=123)
-    return df_dummies, X_train, X_test, y_train, y_test
-
-#####################
-# Train XGBoost Model
-def get_xgb(X_train, X_test, y_train):
-    xgb = XGBClassifier(
-        learning_rate=0.05,
-        max_depth=3,
-        subsample=0.8,
-        colsample_bytree=0.8,
-        n_estimators=100,
-        use_label_encoder=False,
-        eval_metric='logloss'
-    )
-    xgb.fit(X_train, y_train)
-    y_pred = xgb.predict(X_test)
-    return xgb, y_pred
-
-#####################
-# Main logic
+# Upload Data
+st.sidebar.header("Upload HR Data CSV")
+uploaded_file = st.sidebar.file_uploader("Choose a file", type=["csv"])
 
 # Load dataset
-df = load_data('HR_Analytics.csv')
-df_dummies, X_train, X_test, y_train, y_test = split_data(df)
+if uploaded_file:
+    df = pd.read_csv(uploaded_file)
+    st.subheader("Dataset Preview")
+    st.write(df.head())
 
-# Train model
-xgb, y_pred = get_xgb(X_train, X_test, y_train)
+    # Encode categorical features
+    df_encoded = df.copy()
+    label_encoders = {}
+    for col in ['Department', 'salary']:
+        le = LabelEncoder()
+        df_encoded[col] = le.fit_transform(df_encoded[col])
+        label_encoders[col] = le
 
-# Get user input
-user_df = app()
+    # Split
+    X = df_encoded.drop("left", axis=1)
+    y = df_encoded["left"]
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
-# Prediction Button
-if st.button("Predict Employee Retention"):
-    # Match columns
-    user_df = user_df.reindex(columns=X_train.columns, fill_value=0)
-    prediction = xgb.predict(user_df)[0]
-    if prediction == 1:
-        st.warning("⚠️ The employee is likely to leave the company.")
-    else:
-        st.success("✅ The employee is likely to stay at the company.")
+    # Load or train model
+    try:
+        model = joblib.load("xgb_model.pkl")
+        st.success("Loaded pretrained XGBoost model.")
+    except:
+        model = xgb.XGBClassifier(use_label_encoder=False, eval_metric='logloss')
+        model.fit(X_train, y_train)
+        joblib.dump(model, "xgb_model.pkl")
+        st.warning("Trained and saved new XGBoost model.")
+
+    # Predictions on test set
+    y_pred = model.predict(X_test)
+    st.subheader("Prediction on Test Set")
+    st.write(pd.DataFrame({"Actual": y_test.values, "Predicted": y_pred}).head())
+
+    # Form for new input
+    st.sidebar.header("Predict for a New Employee")
+
+    def user_input_features():
+        satisfaction_level = st.sidebar.slider('Satisfaction Level', 0.0, 1.0, 0.5)
+        last_evaluation = st.sidebar.slider('Last Evaluation', 0.0, 1.0, 0.5)
+        number_project = st.sidebar.slider('Number of Projects', 1, 10, 3)
+        average_montly_hours = st.sidebar.slider('Average Monthly Hours', 50, 310, 160)
+        time_spend_company = st.sidebar.slider('Time Spent at Company (Years)', 1, 10, 3)
+        Work_accident = st.sidebar.selectbox('Work Accident', [0, 1])
+        promotion_last_5years = st.sidebar.selectbox('Promotion in Last 5 Years', [0, 1])
+        Department = st.sidebar.selectbox('Department', df['Department'].unique())
+        salary = st.sidebar.selectbox('Salary Level', df['salary'].unique())
+
+        # Encode
+        dept_encoded = label_encoders['Department'].transform([Department])[0]
+        salary_encoded = label_encoders['salary'].transform([salary])[0]
+
+        data = {
+            'satisfaction_level': satisfaction_level,
+            'last_evaluation': last_evaluation,
+            'number_project': number_project,
+            'average_montly_hours': average_montly_hours,
+            'time_spend_company': time_spend_company,
+            'Work_accident': Work_accident,
+            'promotion_last_5years': promotion_last_5years,
+            'Department': dept_encoded,
+            'salary': salary_encoded
+        }
+        return pd.DataFrame(data, index=[0])
+
+    input_df = user_input_features()
+
+    if st.sidebar.button("Predict"):
+        prediction = model.predict(input_df)[0]
+        proba = model.predict_proba(input_df)[0][1]
+
+        st.subheader("Prediction Result")
+        if prediction == 1:
+            st.error(f"🔴 This employee is likely to leave. (Probability: {proba:.2f})")
+        else:
+            st.success(f"🟢 This employee is likely to stay. (Probability of leaving: {proba:.2f})")
+
+    # Visualizations
+    st.subheader("Exploratory Data Analysis")
+    st.markdown("### Correlation Heatmap")
+    fig, ax = plt.subplots()
+    sns.heatmap(df_encoded.corr(), annot=True, cmap='coolwarm', ax=ax)
+    st.pyplot(fig)
+
+    st.markdown("### Distribution of Employee Satisfaction")
+    fig2, ax2 = plt.subplots()
+    sns.histplot(df['satisfaction_level'], kde=True, ax=ax2)
+    st.pyplot(fig2)
+
+else:
+    st.info("👈 Please upload a CSV file to get started.")
