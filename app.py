@@ -82,7 +82,7 @@ xgb= XGBClassifier(
 )
 '''
 st.code(code, language='python')
-xgb, y_pred_xgb = get_rf(df_dummies, X_train, X_test, y_train)
+xgb, y_pred_xgb = get_xgb(df_dummies, X_train, X_test, y_train)
 col1, col2 = st.columns(2)
 with col1:
     st_table(get_rf_report())
