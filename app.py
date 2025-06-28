@@ -67,6 +67,49 @@ def app():
     user_df[salaries[sal]] = 1
 app()
 
+### DATA
+FILEPATH = './HR_Analytics.csv'
+df = load_data(FILEPATH)
+def load_data(filepath):
+    '''
+    Loads the .csv file at filepath, renames columns, and drops duplicates.
+
+    Args:
+        filepath (string)
+    Returns:
+        df (DataFrame): Cleaned DataFrame of .csv data.
+    '''
+    df = pd.read_csv(filepath)
+    new_col_names = {
+        'average_montly_hours': 'average_monthly_hours',
+        'time_spend_company': 'tenure',
+        'Work_accident': 'work_accident',
+        'Department': 'department'
+    }
+    df.rename(columns=new_col_names, inplace=True)
+    df = df.drop_duplicates()
+    return df
+
+#### SPLIT DATA
+def split_data(df):
+    '''
+    Splits the input data for model training. Target is the left column while everything else
+    is a feature.
+
+    Args:
+        df (DataFrame)
+    Returns:
+        df_dummies (DataFrame): Input df with label encoding.
+        X_train (DataFrame): 80% of feature data.
+        X_test (DataFrame): 20% of feature data reserved for model validation.
+        y_train (DataFrame): 80% of taget data.
+        y_test (DataFrame): 20% of target data reserved for model validation.
+    '''
+    df_dummies = pd.get_dummies(df)
+    y = df_dummies.left
+    X = df_dummies.drop('left', axis=1)
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=123)
+    return df_dummies, X_train, X_test, y_train, y_test
 ###
 
 st.subheader('XGBOOST')
