@@ -68,7 +68,7 @@ def app():
 app()
 
 ### DATA
-FILEPATH = './HR_Analytics.csv'
+FILEPATH = 'HR_Analytics.csv'
 df = load_data(FILEPATH)
 def load_data(filepath):
     '''
