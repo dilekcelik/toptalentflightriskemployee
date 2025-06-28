@@ -68,7 +68,7 @@ def app():
 
 app()
 
-prediction = 1 xgb.predict(user_df)
+prediction = xgb.predict(user_df)
 if prediction == 1:
     st.info('The employee is likely to leave the company.')
 elif prediction == 0:
