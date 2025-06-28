@@ -3,8 +3,6 @@ import streamlit as st
 
 st.title('Employee Retention Prediction')
 
-app()
-
 def app():
     '''
     Streamlit UI for predicting whether a employee will leave or not based on the random forest model.
@@ -72,3 +70,5 @@ def app():
         st.info('The employee is likely to leave the company.')
     elif prediction == 0:
         st.info('The employee is likely to continue working at the company.')
+
+app()
