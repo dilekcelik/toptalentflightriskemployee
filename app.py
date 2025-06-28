@@ -83,6 +83,19 @@ xgb= XGBClassifier(
 )
 '''
 st.code(code, language='python')
+xgb, y_pred_xgb = get_rf(df_dummies, X_train, X_test, y_train)
+col1, col2 = st.columns(2)
+with col1:
+    st_table(get_rf_report())
+    st_table(get_rf_metrics())
+with col2:
+    st_plot(plot_confusion_matrix(y_test, y_pred_xgb, xgb, 'XGB Confusion Matrix'))
+st.write('''
+    The XGB performed very well despite the imbalance in data. Additionally, training and validation metric 
+    scores are very close indicating that the model isn't overfitting and the model predicted significantly less false 
+    positives compared to the decision tree.
+''')
+st_plot(plot_roc(y_test, y_pred_xgb))
 
 ###
 
