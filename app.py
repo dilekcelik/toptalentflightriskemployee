@@ -12,7 +12,7 @@ st.title('Employee Retention Prediction')
 
 def app():
     '''
-    Streamlit UI for predicting whether a employee will leave or not based on the random forest model.
+    Streamlit UI for predicting whether a employee will leave or not based on the XGB model.
     '''
     departments = {
         'IT': 'department_IT',	
@@ -137,7 +137,7 @@ st.code(code, language='python')
 
 def get_xgb(df, X_train, X_test, y_train):
     '''
-    Trains, fits, and predicts a random forest model.
+    Trains, fits, and predicts a XGB model.
 
     Args:
         df (DataFrame)
@@ -147,51 +147,7 @@ def get_xgb(df, X_train, X_test, y_train):
     Returns:
         xgb
         y_pred (DataFrame)
-    '''
-    #####
-    import xgboost as xgb
-    from sklearn.model_selection import train_test_split
-    from sklearn.metrics import classification_report, confusion_matrix
-    from sklearn.model_selection import learning_curve
-    import matplotlib.pyplot as plt
-    import numpy as np
-    
-    # Assuming X, y are your actual data and target variables
-    # X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
-    
-    
-    # 2. Set parameters
-    params = {
-        'objective': 'binary:logistic',    # Binary classification task
-        'eval_metric': 'logloss',           # Evaluation metric
-        'learning_rate': 0.05,              # Learning rate
-        'max_depth': 4,                     # Tree depth to prevent overfitting
-        'subsample': 0.8,                   # Use 80% of data for each tree to reduce overfitting
-        'colsample_bytree': 0.8,            # Subsample features to avoid overfitting
-        'seed': 42,                         # Random seed for reproducibility
-        'alpha': 0.1,                       # L1 regularization
-        'lambda': 1.0,                      # L2 regularization
-    }
-    
-    # 3. Convert data to DMatrix format for XGBoost
-    dtrain = xgb.DMatrix(X_train, label=y_train)
-    dtest = xgb.DMatrix(X_test, label=y_test)
-    
-    # 4. Train model with early stopping
-    evals = [(dtrain, 'train'), (dtest, 'eval')]
-    
-    # Cross-validation to select the best number of boosting rounds
-    cv_results = xgb.cv(params, dtrain, nfold=5, num_boost_round=1000, early_stopping_rounds=20,
-                        metrics="logloss", seed=42)
-    
-    best_num_round = cv_results.shape[0]  # Best number of boosting rounds from cross-validation
-    
-    # 5. Train final model with the best number of boosting rounds
-    xgb_model = xgb.train(params, dtrain, num_boost_round=best_num_round, evals=evals, early_stopping_rounds=20)
-    
-    # 6. Predict on the test set
-    y_pred = (xgb_model.predict(dtest) > 0.5).astype(int)
-    
+    '''  
     ######
     
     xgb = XGBClassifier(
@@ -199,7 +155,7 @@ def get_xgb(df, X_train, X_test, y_train):
     max_depth=3,
     subsample=0.8,
     colsample_bytree=0.8,
-    n_estimators=xgb_model.best_iteration,
+    n_estimators=100,
     use_label_encoder=False,
     eval_metric='logloss'
     )
