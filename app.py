@@ -65,8 +65,38 @@ def app():
     }, index=[0])
     user_df[departments[dept]] = 1
     user_df[salaries[sal]] = 1
-
 app()
+
+###
+
+st.subheader('XGBOOST')
+code = '''
+xgb= XGBClassifier(
+    learning_rate=0.05,
+    max_depth=3,
+    subsample=0.8,
+    colsample_bytree=0.8,
+    n_estimators=xgb_model.best_iteration,
+    use_label_encoder=False,
+    eval_metric='logloss'
+)
+'''
+st.code(code, language='python')
+xgb, y_pred_xgb = get_rf(df_dummies, X_train, X_test, y_train)
+col1, col2 = st.columns(2)
+with col1:
+    st_table(get_rf_report())
+    st_table(get_rf_metrics())
+with col2:
+    st_plot(plot_confusion_matrix(y_test, y_pred_xgb, xgb, 'XGB Confusion Matrix'))
+st.write('''
+    The XGB performed very well despite the imbalance in data. Additionally, training and validation metric 
+    scores are very close indicating that the model isn't overfitting and the model predicted significantly less false 
+    positives compared to the decision tree.
+''')
+#st_plot(plot_roc(y_test, y_pred_xgb))
+
+###
 
 prediction = xgb.predict(user_df)
 if prediction == 1:
