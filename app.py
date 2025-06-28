@@ -89,7 +89,9 @@ def load_data(filepath):
     return df
 FILEPATH = 'HR_Analytics.csv'
 df = load_data(FILEPATH)
-#### SPLIT DATA
+
+######## SPLIT DATA
+
 def split_data(df):
     '''
     Splits the input data for model training. Target is the left column while everything else
@@ -111,7 +113,6 @@ def split_data(df):
     return df_dummies, X_train, X_test, y_train, y_test
 
 ######### XGB MODEL
-
 st.subheader('XGBOOST')
 code = '''
 xgb= XGBClassifier(
@@ -125,7 +126,36 @@ xgb= XGBClassifier(
 )
 '''
 st.code(code, language='python')
-xgb, y_pred_xgb = util.get_xgb(df_dummies, X_train, X_test, y_train)
+
+
+def get_xgb(df, X_train, X_test, y_train):
+    '''
+    Trains, fits, and predicts a random forest model.
+
+    Args:
+        df (DataFrame)
+        X_train (DataFrame)
+        X_test (DataFrame)
+        y_train (DataFrame)
+    Returns:
+        xgb
+        y_pred (DataFrame)
+    '''
+    xgb = XGBClassifier(
+    learning_rate=0.05,
+    max_depth=3,
+    subsample=0.8,
+    colsample_bytree=0.8,
+    n_estimators=xgb_model.best_iteration,
+    use_label_encoder=False,
+    eval_metric='logloss'
+    )
+    xgb.fit(X_train, y_train)
+    y_pred = xgb.predict(X_test)
+    return xgb, y_pred
+
+df_dummies, X_train, X_test, y_train, y_test = split_data(df)
+xgb, y_pred_xgb = get_xgb(df_dummies, X_train, X_test, y_train)
 
 ######### PREDICTION
 
