@@ -1,8 +1,13 @@
 import pandas as pd
 import streamlit as st
+from sklearn.model_selection import train_test_split
+import xgboost as xgb
+from sklearn.metrics import classification_report, accuracy_score, precision_score, f1_score, recall_score
 
 
 st.title('Employee Retention Prediction')
+
+################
 
 def app():
     '''
@@ -67,7 +72,8 @@ def app():
     user_df[salaries[sal]] = 1
 app()
 
-### DATA
+################ DATA
+
 def load_data(filepath):
     '''
     Loads the .csv file at filepath, renames columns, and drops duplicates.
@@ -87,10 +93,10 @@ def load_data(filepath):
     df.rename(columns=new_col_names, inplace=True)
     df = df.drop_duplicates()
     return df
-FILEPATH = 'HR_Analytics.csv'
-df = load_data(FILEPATH)
 
-######## SPLIT DATA
+df = load_data('HR_Analytics.csv')
+
+################ SPLIT DATA
 
 def split_data(df):
     '''
@@ -112,8 +118,9 @@ def split_data(df):
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=123)
     return df_dummies, X_train, X_test, y_train, y_test
 
-######### XGB MODEL
+################ XGB MODEL
 st.subheader('XGBOOST')
+
 code = '''
 xgb= XGBClassifier(
     learning_rate=0.05,
@@ -126,7 +133,6 @@ xgb= XGBClassifier(
 )
 '''
 st.code(code, language='python')
-
 
 def get_xgb(df, X_train, X_test, y_train):
     '''
@@ -157,7 +163,7 @@ def get_xgb(df, X_train, X_test, y_train):
 df_dummies, X_train, X_test, y_train, y_test = split_data(df)
 xgb, y_pred_xgb = get_xgb(df_dummies, X_train, X_test, y_train)
 
-######### PREDICTION
+################ PREDICTION
 
 prediction = xgb.predict(user_df)
 if prediction == 1:
