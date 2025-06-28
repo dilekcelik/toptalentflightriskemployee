@@ -1,5 +1,6 @@
 import pandas as pd
 import streamlit as st
+from util import *
 
 st.title('Employee Retention Prediction')
 
@@ -67,7 +68,7 @@ def app():
 
 app()
 
-prediction = 1 #rf.predict(user_df)
+prediction = 1 xgb.predict(user_df)
 if prediction == 1:
     st.info('The employee is likely to leave the company.')
 elif prediction == 0:
