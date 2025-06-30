@@ -5,12 +5,16 @@ import plotly.graph_objects as go
 
 # Page config
 st.set_page_config(layout="wide")
-st.title("📊 HR Analytics Dashboard (Styled Version)")
+st.title("\U0001F4CA HR Analytics Dashboard (Styled Version)")
 
 # Upload CSV
 uploaded_file = st.sidebar.file_uploader("Upload HR Data CSV", type=["csv"])
 
-# CSS styles for rectangular KPI cards
+# Plotly color palette (qualitative)
+color_palette = ['#636EFA', '#EF553B', '#00CC96', '#AB63FA', '#FFA15A', 
+                 '#19D3F3', '#FF6692', '#B6E880', '#FF97FF', '#FECB52']
+
+# CSS styles for KPI cards
 st.markdown("""
 <style>
 .kpi-card {
@@ -19,7 +23,7 @@ st.markdown("""
     border-radius: 12px;
     box-shadow: 0 2px 8px rgba(0,0,0,0.1);
     text-align: center;
-    border-left: 8px solid #4CAF50; /* default green */
+    border-left: 8px solid #636EFA; /* default blue */
 }
 .kpi-title {
     font-weight: bold;
@@ -32,9 +36,9 @@ st.markdown("""
     margin-top: 5px;
     color: #000;
 }
-.red-border { border-left-color: #f44336; }
-.orange-border { border-left-color: #ff9800; }
-.teal-border { border-left-color: #009688; }
+.red-border { border-left-color: #EF553B; }
+.orange-border { border-left-color: #FFA15A; }
+teal-border { border-left-color: #00CC96; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -49,13 +53,13 @@ if uploaded_file:
     avg_projects = df['number_project'].mean()
 
     # KPI Cards Section
-    st.markdown("### 📌 Key Metrics")
+    st.markdown("### \U0001F4CC Key Metrics")
     col1, col2, col3, col4, col5 = st.columns(5)
 
     with col1:
         st.markdown(f"""
         <div class="kpi-card teal-border">
-            <div class="kpi-title">👥 Employees</div>
+            <div class="kpi-title">\U0001F465 Employees</div>
             <div class="kpi-value">{total_employees:,}</div>
         </div>
         """, unsafe_allow_html=True)
@@ -71,7 +75,7 @@ if uploaded_file:
     with col3:
         st.markdown(f"""
         <div class="kpi-card orange-border">
-            <div class="kpi-title">😊 Avg. Satisfaction</div>
+            <div class="kpi-title">☺ Avg. Satisfaction</div>
             <div class="kpi-value">{avg_satisfaction:.2f}</div>
         </div>
         """, unsafe_allow_html=True)
@@ -79,7 +83,7 @@ if uploaded_file:
     with col4:
         st.markdown(f"""
         <div class="kpi-card teal-border">
-            <div class="kpi-title">📈 Avg. Evaluation</div>
+            <div class="kpi-title">\U0001F4C8 Avg. Evaluation</div>
             <div class="kpi-value">{avg_eval:.2f}</div>
         </div>
         """, unsafe_allow_html=True)
@@ -87,18 +91,20 @@ if uploaded_file:
     with col5:
         st.markdown(f"""
         <div class="kpi-card orange-border">
-            <div class="kpi-title">📊 Avg. Projects</div>
+            <div class="kpi-title">\U0001F4CA Avg. Projects</div>
             <div class="kpi-value">{avg_projects:.1f}</div>
         </div>
         """, unsafe_allow_html=True)
 
     st.markdown("---")
-    st.subheader("📊 Interactive Visualizations")
+    st.subheader("\U0001F4CA Interactive Visualizations")
 
     # Histogram - Satisfaction Level
     st.plotly_chart(
-        px.histogram(df, x='satisfaction_level', nbins=20, title="Satisfaction Level Distribution",
-                     marginal="rug", color_discrete_sequence=['#636EFA'])
+        px.histogram(df, x='satisfaction_level', nbins=20,
+                     title="Satisfaction Level Distribution",
+                     marginal="rug",
+                     color_discrete_sequence=[color_palette[0]])
     )
 
     # Scatterplot - Satisfaction vs Evaluation
@@ -108,7 +114,7 @@ if uploaded_file:
                    title="Satisfaction vs Last Evaluation",
                    labels={"color": "Attrition"},
                    hover_data=['number_project', 'salary'],
-                   color_discrete_map={'Stayed': 'green', 'Left': 'red'})
+                   color_discrete_map={'Stayed': color_palette[2], 'Left': color_palette[1]})
     )
 
     # Histogram - Attrition by Department
@@ -117,7 +123,7 @@ if uploaded_file:
                      color=df['left'].map({0: 'Stayed', 1: 'Left'}),
                      title="Attrition by Department", barmode='group',
                      labels={"color": "Attrition"},
-                     color_discrete_map={'Stayed': 'blue', 'Left': 'orange'})
+                     color_discrete_map={'Stayed': color_palette[2], 'Left': color_palette[1]})
     )
 
     # Histogram - Salary vs Attrition
@@ -127,7 +133,7 @@ if uploaded_file:
                      title="Attrition by Salary Level", barmode='group',
                      category_orders={"salary": ["low", "medium", "high"]},
                      labels={"color": "Attrition"},
-                     color_discrete_map={'Stayed': 'blue', 'Left': 'orange'})
+                     color_discrete_map={'Stayed': color_palette[4], 'Left': color_palette[1]})
     )
 
     # Boxplot - Time at Company vs Attrition
@@ -136,7 +142,7 @@ if uploaded_file:
                color=df['left'].map({0: 'Stayed', 1: 'Left'}),
                title="Time Spent at Company vs Attrition",
                labels={'left': 'Attrition'},
-               color_discrete_map={'Stayed': 'blue', 'Left': 'orange'})
+               color_discrete_map={'Stayed': color_palette[2], 'Left': color_palette[1]})
     )
 
     # Promotions and Work Accidents
@@ -144,14 +150,14 @@ if uploaded_file:
     acc_counts = df.groupby(['Work_accident', 'left']).size().unstack(fill_value=0)
 
     promo_fig = go.Figure(data=[
-        go.Bar(name='Stayed', x=[str(i) for i in promo_counts.index], y=promo_counts[0], marker_color='blue'),
-        go.Bar(name='Left', x=[str(i) for i in promo_counts.index], y=promo_counts[1], marker_color='orange')
+        go.Bar(name='Stayed', x=[str(i) for i in promo_counts.index], y=promo_counts[0], marker_color=color_palette[2]),
+        go.Bar(name='Left', x=[str(i) for i in promo_counts.index], y=promo_counts[1], marker_color=color_palette[1])
     ])
     promo_fig.update_layout(title="Promotions in Last 5 Years vs Attrition", barmode='group', xaxis_title="Promoted")
 
     acc_fig = go.Figure(data=[
-        go.Bar(name='Stayed', x=[str(i) for i in acc_counts.index], y=acc_counts[0], marker_color='green'),
-        go.Bar(name='Left', x=[str(i) for i in acc_counts.index], y=acc_counts[1], marker_color='red')
+        go.Bar(name='Stayed', x=[str(i) for i in acc_counts.index], y=acc_counts[0], marker_color=color_palette[2]),
+        go.Bar(name='Left', x=[str(i) for i in acc_counts.index], y=acc_counts[1], marker_color=color_palette[1])
     ])
     acc_fig.update_layout(title="Work Accident vs Attrition", barmode='group', xaxis_title="Had Work Accident")
 
@@ -174,4 +180,4 @@ if uploaded_file:
     st.plotly_chart(heatmap_fig)
 
 else:
-    st.info("👈 Please upload a CSV file to begin analysis.")
+    st.info("\U0001F448 Please upload a CSV file to begin analysis.")
