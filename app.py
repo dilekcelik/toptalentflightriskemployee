@@ -20,8 +20,15 @@ if uploaded_file:
     avg_eval = df['last_evaluation'].mean()
     avg_projects = df['number_project'].mean()
 
-    # KPI Cards
-    st.markdown("### 📌 Key Metrics")
+    # KPI Cards in a styled container
+st.markdown("""
+    <div style="background-color:#f0f2f6; padding: 20px; border-radius: 10px; box-shadow: 0 2px 6px rgba(0,0,0,0.1);">
+        <h3>📌 Key Metrics</h3>
+    </div>
+""", unsafe_allow_html=True)
+
+kpi_container = st.container()
+with kpi_container:
     kpi1, kpi2, kpi3, kpi4, kpi5 = st.columns(5)
     kpi1.metric("👥 Employees", f"{total_employees:,}")
     kpi2.metric("❌ Attrition Rate", f"{attrition_rate:.2f}%")
