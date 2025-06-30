@@ -9,7 +9,7 @@ from sklearn.preprocessing import LabelEncoder
 import openai
 
 # OpenAI 
-openai.api_key = st.secrets["openai_api_key"]
+openai.api_key = st.secrets['openai']["openai_api_key"]
 st.write("✅ OpenAI API Key loaded successfully.")
 
 
