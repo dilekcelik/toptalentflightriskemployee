@@ -1,107 +1,93 @@
 import streamlit as st
 import pandas as pd
-import xgboost as xgb
 import matplotlib.pyplot as plt
 import seaborn as sns
-import joblib
-from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import LabelEncoder
 
-# Title
-st.title("HR Analytics Dashboard with XGBoost Prediction")
+# Set wide layout
+st.set_page_config(layout="wide")
+st.title("📊 HR Analytics Dashboard")
+st.markdown("### Employee Flight Risk Overview")
 
-# Upload Data
-st.sidebar.header("Upload HR Data CSV")
-uploaded_file = st.sidebar.file_uploader("Choose a file", type=["csv"])
+# Upload file
+uploaded_file = st.sidebar.file_uploader("Upload HR Data CSV", type=["csv"])
 
-# Load dataset
 if uploaded_file:
     df = pd.read_csv(uploaded_file)
-    st.subheader("Dataset Preview")
-    st.write(df.head())
 
-    # Encode categorical features
-    df_encoded = df.copy()
-    label_encoders = {}
-    for col in ['Department', 'salary']:
-        le = LabelEncoder()
-        df_encoded[col] = le.fit_transform(df_encoded[col])
-        label_encoders[col] = le
+    st.markdown("#### 🔍 Dataset Preview")
+    st.dataframe(df.head())
 
-    # Split
-    X = df_encoded.drop("left", axis=1)
-    y = df_encoded["left"]
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+    # Key Metrics
+    total_employees = df.shape[0]
+    attrition_rate = df['left'].mean() * 100
+    avg_satisfaction = df['satisfaction_level'].mean()
+    avg_eval = df['last_evaluation'].mean()
+    avg_projects = df['number_project'].mean()
 
-    # Load or train model
-    try:
-        model = joblib.load("xgb_model.pkl")
-        st.success("Loaded pretrained XGBoost model.")
-    except:
-        model = xgb.XGBClassifier(use_label_encoder=False, eval_metric='logloss')
-        model.fit(X_train, y_train)
-        joblib.dump(model, "xgb_model.pkl")
-        st.warning("Trained and saved new XGBoost model.")
+    col1, col2, col3 = st.columns(3)
+    col1.metric("👥 Total Employees", f"{total_employees:,}")
+    col2.metric("❌ Attrition Rate", f"{attrition_rate:.2f}%")
+    col3.metric("😊 Avg. Satisfaction", f"{avg_satisfaction:.2f}")
 
-    # Predictions on test set
-    y_pred = model.predict(X_test)
-    st.subheader("Prediction on Test Set")
-    st.write(pd.DataFrame({"Actual": y_test.values, "Predicted": y_pred}).head())
+    col4, col5 = st.columns(2)
+    col4.metric("📈 Avg. Evaluation Score", f"{avg_eval:.2f}")
+    col5.metric("📊 Avg. Project Count", f"{avg_projects:.1f}")
 
-    # Form for new input
-    st.sidebar.header("Predict for a New Employee")
+    st.markdown("---")
+    st.subheader("📊 Visualizations")
 
-    def user_input_features():
-        satisfaction_level = st.sidebar.slider('Satisfaction Level', 0.0, 1.0, 0.5)
-        last_evaluation = st.sidebar.slider('Last Evaluation', 0.0, 1.0, 0.5)
-        number_project = st.sidebar.slider('Number of Projects', 1, 10, 3)
-        average_montly_hours = st.sidebar.slider('Average Monthly Hours', 50, 310, 160)
-        time_spend_company = st.sidebar.slider('Time Spent at Company (Years)', 1, 10, 3)
-        Work_accident = st.sidebar.selectbox('Work Accident', [0, 1])
-        promotion_last_5years = st.sidebar.selectbox('Promotion in Last 5 Years', [0, 1])
-        Department = st.sidebar.selectbox('Department', df['Department'].unique())
-        salary = st.sidebar.selectbox('Salary Level', df['salary'].unique())
+    colA, colB = st.columns(2)
+    with colA:
+        st.markdown("#### Satisfaction Level Distribution")
+        fig, ax = plt.subplots()
+        sns.histplot(df['satisfaction_level'], kde=True, ax=ax, bins=20)
+        st.pyplot(fig)
 
-        # Encode
-        dept_encoded = label_encoders['Department'].transform([Department])[0]
-        salary_encoded = label_encoders['salary'].transform([salary])[0]
+    with colB:
+        st.markdown("#### Satisfaction vs Last Evaluation")
+        fig, ax = plt.subplots()
+        sns.scatterplot(data=df, x='satisfaction_level', y='last_evaluation', hue='left', alpha=0.7, ax=ax)
+        st.pyplot(fig)
 
-        data = {
-            'satisfaction_level': satisfaction_level,
-            'last_evaluation': last_evaluation,
-            'number_project': number_project,
-            'average_montly_hours': average_montly_hours,
-            'time_spend_company': time_spend_company,
-            'Work_accident': Work_accident,
-            'promotion_last_5years': promotion_last_5years,
-            'Department': dept_encoded,
-            'salary': salary_encoded
-        }
-        return pd.DataFrame(data, index=[0])
+    colC, colD = st.columns(2)
+    with colC:
+        st.markdown("#### Attrition by Department")
+        fig, ax = plt.subplots()
+        sns.countplot(data=df, x='Department', hue='left', ax=ax)
+        plt.xticks(rotation=45)
+        st.pyplot(fig)
 
-    input_df = user_input_features()
+    with colD:
+        st.markdown("#### Attrition by Salary Level")
+        fig, ax = plt.subplots()
+        sns.countplot(data=df, x='salary', hue='left', ax=ax,
+                      order=sorted(df['salary'].unique()))  # Ensures order: low < medium < high
+        st.pyplot(fig)
 
-    if st.sidebar.button("Predict"):
-        prediction = model.predict(input_df)[0]
-        proba = model.predict_proba(input_df)[0][1]
+    colE, colF = st.columns(2)
+    with colE:
+        st.markdown("#### Time Spent at Company vs Attrition")
+        fig, ax = plt.subplots()
+        sns.boxplot(data=df, x='left', y='time_spend_company', ax=ax)
+        st.pyplot(fig)
 
-        st.subheader("Prediction Result")
-        if prediction == 1:
-            st.error(f"🔴 This employee is likely to leave. (Probability: {proba:.2f})")
-        else:
-            st.success(f"🟢 This employee is likely to stay. (Probability of leaving: {proba:.2f})")
+    with colF:
+        st.markdown("#### Promotion & Work Accident vs Attrition")
+        fig, ax = plt.subplots()
+        sns.countplot(data=df, x='promotion_last_5years', hue='left', ax=ax)
+        plt.title("Promotions vs Attrition")
+        st.pyplot(fig)
 
-    # Visualizations
-    st.subheader("Exploratory Data Analysis")
-    st.markdown("### Correlation Heatmap")
-    fig, ax = plt.subplots()
-    sns.heatmap(df_encoded.corr(), annot=True, cmap='coolwarm', ax=ax)
+        fig2, ax2 = plt.subplots()
+        sns.countplot(data=df, x='Work_accident', hue='left', ax=ax2)
+        plt.title("Work Accidents vs Attrition")
+        st.pyplot(fig2)
+
+    st.markdown("---")
+    st.subheader("🔁 Correlation Heatmap")
+    fig, ax = plt.subplots(figsize=(10, 6))
+    sns.heatmap(df.corr(numeric_only=True), annot=True, cmap='coolwarm', ax=ax)
     st.pyplot(fig)
 
-    st.markdown("### Distribution of Employee Satisfaction")
-    fig2, ax2 = plt.subplots()
-    sns.histplot(df['satisfaction_level'], kde=True, ax=ax2)
-    st.pyplot(fig2)
-
 else:
-    st.info("👈 Please upload a CSV file to get started.")
+    st.info("👈 Please upload a CSV file to start exploring your HR data.")
