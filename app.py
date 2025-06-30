@@ -147,4 +147,4 @@ if uploaded_file:
         st.markdown(f"💡 **AI Insight:** {generate_commentary(prompt)}")
 
 else:
-    st.info("📥 Please upload a CSV file to get started
+    st.info("📥 Please upload a CSV file to get started.")
