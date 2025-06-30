@@ -2,10 +2,10 @@ seaborn
 xgboost
 pandas
 scikit-learn
-streamlit
 numpy
 matplotlib
 joblib
 plotly
-openai
 toml
+streamlit>=1.39.0
+openai>=1.42.0
