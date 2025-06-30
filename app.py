@@ -1,93 +1,106 @@
 import streamlit as st
 import pandas as pd
-import matplotlib.pyplot as plt
-import seaborn as sns
+import plotly.express as px
+import plotly.graph_objects as go
 
-# Set wide layout
+# Configure layout
 st.set_page_config(layout="wide")
-st.title("📊 HR Analytics Dashboard")
-st.markdown("### Employee Flight Risk Overview")
+st.title("📊 HR Analytics Dashboard (Interactive Plotly Version)")
 
-# Upload file
+# Upload CSV
 uploaded_file = st.sidebar.file_uploader("Upload HR Data CSV", type=["csv"])
 
 if uploaded_file:
     df = pd.read_csv(uploaded_file)
 
-    st.markdown("#### 🔍 Dataset Preview")
-    st.dataframe(df.head())
-
-    # Key Metrics
+    # Metrics
     total_employees = df.shape[0]
     attrition_rate = df['left'].mean() * 100
     avg_satisfaction = df['satisfaction_level'].mean()
     avg_eval = df['last_evaluation'].mean()
     avg_projects = df['number_project'].mean()
 
-    col1, col2, col3 = st.columns(3)
-    col1.metric("👥 Total Employees", f"{total_employees:,}")
-    col2.metric("❌ Attrition Rate", f"{attrition_rate:.2f}%")
-    col3.metric("😊 Avg. Satisfaction", f"{avg_satisfaction:.2f}")
-
-    col4, col5 = st.columns(2)
-    col4.metric("📈 Avg. Evaluation Score", f"{avg_eval:.2f}")
-    col5.metric("📊 Avg. Project Count", f"{avg_projects:.1f}")
-
-    st.markdown("---")
-    st.subheader("📊 Visualizations")
-
-    colA, colB = st.columns(2)
-    with colA:
-        st.markdown("#### Satisfaction Level Distribution")
-        fig, ax = plt.subplots()
-        sns.histplot(df['satisfaction_level'], kde=True, ax=ax, bins=20)
-        st.pyplot(fig)
-
-    with colB:
-        st.markdown("#### Satisfaction vs Last Evaluation")
-        fig, ax = plt.subplots()
-        sns.scatterplot(data=df, x='satisfaction_level', y='last_evaluation', hue='left', alpha=0.7, ax=ax)
-        st.pyplot(fig)
-
-    colC, colD = st.columns(2)
-    with colC:
-        st.markdown("#### Attrition by Department")
-        fig, ax = plt.subplots()
-        sns.countplot(data=df, x='Department', hue='left', ax=ax)
-        plt.xticks(rotation=45)
-        st.pyplot(fig)
-
-    with colD:
-        st.markdown("#### Attrition by Salary Level")
-        fig, ax = plt.subplots()
-        sns.countplot(data=df, x='salary', hue='left', ax=ax,
-                      order=sorted(df['salary'].unique()))  # Ensures order: low < medium < high
-        st.pyplot(fig)
-
-    colE, colF = st.columns(2)
-    with colE:
-        st.markdown("#### Time Spent at Company vs Attrition")
-        fig, ax = plt.subplots()
-        sns.boxplot(data=df, x='left', y='time_spend_company', ax=ax)
-        st.pyplot(fig)
-
-    with colF:
-        st.markdown("#### Promotion & Work Accident vs Attrition")
-        fig, ax = plt.subplots()
-        sns.countplot(data=df, x='promotion_last_5years', hue='left', ax=ax)
-        plt.title("Promotions vs Attrition")
-        st.pyplot(fig)
-
-        fig2, ax2 = plt.subplots()
-        sns.countplot(data=df, x='Work_accident', hue='left', ax=ax2)
-        plt.title("Work Accidents vs Attrition")
-        st.pyplot(fig2)
+    # KPI Cards
+    st.markdown("### 📌 Key Metrics")
+    kpi1, kpi2, kpi3, kpi4, kpi5 = st.columns(5)
+    kpi1.metric("👥 Employees", f"{total_employees:,}")
+    kpi2.metric("❌ Attrition Rate", f"{attrition_rate:.2f}%")
+    kpi3.metric("😊 Avg. Satisfaction", f"{avg_satisfaction:.2f}")
+    kpi4.metric("📈 Avg. Evaluation", f"{avg_eval:.2f}")
+    kpi5.metric("📊 Avg. Projects", f"{avg_projects:.1f}")
 
     st.markdown("---")
-    st.subheader("🔁 Correlation Heatmap")
-    fig, ax = plt.subplots(figsize=(10, 6))
-    sns.heatmap(df.corr(numeric_only=True), annot=True, cmap='coolwarm', ax=ax)
-    st.pyplot(fig)
+    st.subheader("📊 Interactive Visualizations")
+
+    # Satisfaction Distribution
+    st.plotly_chart(
+        px.histogram(df, x='satisfaction_level', nbins=20, title="Satisfaction Level Distribution",
+                     marginal="rug", color_discrete_sequence=['#636EFA'])
+    )
+
+    # Scatterplot: Satisfaction vs Evaluation
+    st.plotly_chart(
+        px.scatter(df, x='satisfaction_level', y='last_evaluation', color=df['left'].map({0: 'Stayed', 1: 'Left'}),
+                   title="Satisfaction vs Last Evaluation", labels={"color": "Attrition"},
+                   hover_data=['number_project', 'salary'], color_discrete_map={'Stayed': 'green', 'Left': 'red'})
+    )
+
+    # Department-wise Attrition
+    st.plotly_chart(
+        px.histogram(df, x='Department', color=df['left'].map({0: 'Stayed', 1: 'Left'}),
+                     title="Attrition by Department", barmode='group',
+                     labels={"color": "Attrition"}, color_discrete_map={'Stayed': 'blue', 'Left': 'orange'})
+    )
+
+    # Salary vs Attrition
+    st.plotly_chart(
+        px.histogram(df, x='salary', color=df['left'].map({0: 'Stayed', 1: 'Left'}),
+                     title="Attrition by Salary Level", barmode='group',
+                     category_orders={"salary": ["low", "medium", "high"]},
+                     labels={"color": "Attrition"}, color_discrete_map={'Stayed': 'blue', 'Left': 'orange'})
+    )
+
+    # Time Spent at Company
+    st.plotly_chart(
+        px.box(df, x='left', y='time_spend_company',
+               color=df['left'].map({0: 'Stayed', 1: 'Left'}),
+               title="Time Spent at Company vs Attrition",
+               labels={'left': 'Attrition'}, color_discrete_map={'Stayed': 'blue', 'Left': 'orange'})
+    )
+
+    # Promotion and Work Accident vs Attrition using Graph Objects
+    promo_counts = df.groupby(['promotion_last_5years', 'left']).size().unstack(fill_value=0)
+    acc_counts = df.groupby(['Work_accident', 'left']).size().unstack(fill_value=0)
+
+    promo_fig = go.Figure(data=[
+        go.Bar(name='Stayed', x=[str(i) for i in promo_counts.index], y=promo_counts[0], marker_color='blue'),
+        go.Bar(name='Left', x=[str(i) for i in promo_counts.index], y=promo_counts[1], marker_color='orange')
+    ])
+    promo_fig.update_layout(title="Promotions in Last 5 Years vs Attrition", barmode='group', xaxis_title="Promoted")
+
+    acc_fig = go.Figure(data=[
+        go.Bar(name='Stayed', x=[str(i) for i in acc_counts.index], y=acc_counts[0], marker_color='green'),
+        go.Bar(name='Left', x=[str(i) for i in acc_counts.index], y=acc_counts[1], marker_color='red')
+    ])
+    acc_fig.update_layout(title="Work Accident vs Attrition", barmode='group', xaxis_title="Had Work Accident")
+
+    st.plotly_chart(promo_fig)
+    st.plotly_chart(acc_fig)
+
+    # Correlation Heatmap using Graph Objects
+    corr = df.corr(numeric_only=True)
+    heatmap_fig = go.Figure(
+        data=go.Heatmap(
+            z=corr.values,
+            x=corr.columns,
+            y=corr.columns,
+            colorscale='RdBu',
+            zmin=-1, zmax=1,
+            colorbar_title="Correlation"
+        )
+    )
+    heatmap_fig.update_layout(title="Correlation Heatmap", xaxis_showgrid=False, yaxis_showgrid=False)
+    st.plotly_chart(heatmap_fig)
 
 else:
-    st.info("👈 Please upload a CSV file to start exploring your HR data.")
+    st.info("👈 Please upload a CSV file to begin analysis.")
