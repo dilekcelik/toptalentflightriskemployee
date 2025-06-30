@@ -8,8 +8,8 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder
 import openai
 
-# OpenAI API
-openai.api_key = st.secrets["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"]
+# OpenAI API openai_api_key = st.secrets['openai']["OPENAI_API_KEY"]
+openai.api_key = st.secrets['openai']["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"]
 
 def generate_commentary(prompt):
     try:
