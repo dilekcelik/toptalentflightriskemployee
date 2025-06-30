@@ -10,6 +10,8 @@ import openai
 
 # OpenAI 
 openai.api_key = st.secrets["openai_api_key"]
+st.write("✅ OpenAI API Key loaded successfully.")
+
 
 def generate_commentary(prompt):
     try:
