@@ -21,20 +21,78 @@ if uploaded_file:
     avg_projects = df['number_project'].mean()
 
     # KPI Cards in a styled container
+
 st.markdown("""
-    <div style="background-color:#f0f2f6; padding: 20px; border-radius: 10px; box-shadow: 0 2px 6px rgba(0,0,0,0.1);">
-        <h3>📌 Key Metrics</h3>
-    </div>
+<style>
+.kpi-card {
+    background-color: #ffffff;
+    padding: 15px 20px;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    text-align: center;
+    border-left: 8px solid #4CAF50; /* Default green */
+}
+.kpi-title {
+    font-weight: bold;
+    font-size: 16px;
+    color: #555;
+}
+.kpi-value {
+    font-size: 28px;
+    font-weight: 600;
+    margin-top: 5px;
+    color: #000;
+}
+.red-border { border-left-color: #f44336; }
+.orange-border { border-left-color: #ff9800; }
+.teal-border { border-left-color: #009688; }
+</style>
 """, unsafe_allow_html=True)
 
-kpi_container = st.container()
-with kpi_container:
-    kpi1, kpi2, kpi3, kpi4, kpi5 = st.columns(5)
-    kpi1.metric("👥 Employees", f"{total_employees:,}")
-    kpi2.metric("❌ Attrition Rate", f"{attrition_rate:.2f}%")
-    kpi3.metric("😊 Avg. Satisfaction", f"{avg_satisfaction:.2f}")
-    kpi4.metric("📈 Avg. Evaluation", f"{avg_eval:.2f}")
-    kpi5.metric("📊 Avg. Projects", f"{avg_projects:.1f}")
+col1, col2, col3, col4, col5 = st.columns(5)
+
+with col1:
+    st.markdown(f"""
+    <div class="kpi-card teal-border">
+        <div class="kpi-title">👥 Employees</div>
+        <div class="kpi-value">{total_employees:,}</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+with col2:
+    st.markdown(f"""
+    <div class="kpi-card red-border">
+        <div class="kpi-title">❌ Attrition Rate</div>
+        <div class="kpi-value">{attrition_rate:.2f}%</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+with col3:
+    st.markdown(f"""
+    <div class="kpi-card orange-border">
+        <div class="kpi-title">😊 Avg. Satisfaction</div>
+        <div class="kpi-value">{avg_satisfaction:.2f}</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+with col4:
+    st.markdown(f"""
+    <div class="kpi-card teal-border">
+        <div class="kpi-title">📈 Avg. Evaluation</div>
+        <div class="kpi-value">{avg_eval:.2f}</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+with col5:
+    st.markdown(f"""
+    <div class="kpi-card orange-border">
+        <div class="kpi-title">📊 Avg. Projects</div>
+        <div class="kpi-value">{avg_projects:.1f}</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+
+    
 
     st.markdown("---")
     st.subheader("📊 Interactive Visualizations")
