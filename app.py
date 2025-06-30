@@ -1,150 +1,152 @@
 import streamlit as st
 import pandas as pd
-import xgboost as xgb
-import joblib
 import plotly.express as px
-from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import LabelEncoder
+import plotly.graph_objects as go
 from openai import OpenAI
 
-# ✅ Load OpenAI API key from Streamlit secrets
+# Set layout
+st.set_page_config(layout="wide")
+st.title("📊 HR Analytics Dashboard (with GPT-4 Commentary)")
+
+# ✅ OpenAI client (ensure API key is in .streamlit/secrets.toml)
 client = OpenAI(api_key=st.secrets["openai_api_key"])
 
-# 🔍 Generate AI-based commentary
-def generate_commentary(prompt):
+def ai_commentary(prompt):
     try:
         response = client.chat.completions.create(
             model="gpt-4",
             messages=[
-                {"role": "system", "content": "You are a data analyst who provides concise and insightful commentary."},
+                {"role": "system", "content": "You are a data analyst providing concise insights on HR data visualizations."},
                 {"role": "user", "content": prompt}
             ],
-            temperature=0.6,
+            temperature=0.5,
             max_tokens=150
         )
         return response.choices[0].message.content.strip()
     except Exception as e:
-        return f"❌ Error generating AI commentary: {str(e)}"
+        return f"⚠️ Error generating commentary: {str(e)}"
 
-# 🚀 App title
-st.title("🩺 Health Care Workforce Analytics with AI Commentary")
-
-# 📥 Upload CSV
-st.sidebar.header("Upload HR Data CSV")
-uploaded_file = st.sidebar.file_uploader("Choose a file", type=["csv"])
+# Sidebar
+uploaded_file = st.sidebar.file_uploader("Upload HR Data CSV", type=["csv"])
 use_ai = st.sidebar.checkbox("💬 Enable AI Commentary", value=True)
 
 if uploaded_file:
     df = pd.read_csv(uploaded_file)
-    st.subheader("📊 Dataset Preview")
-    st.write(df.head())
 
-    # 🔧 Encode categorical features
-    df_encoded = df.copy()
-    label_encoders = {}
-    for col in ['Department', 'salary']:
-        le = LabelEncoder()
-        df_encoded[col] = le.fit_transform(df_encoded[col])
-        label_encoders[col] = le
+    # KPIs
+    total_employees = df.shape[0]
+    attrition_rate = df['left'].mean() * 100
+    avg_satisfaction = df['satisfaction_level'].mean()
+    avg_eval = df['last_evaluation'].mean()
+    avg_projects = df['number_project'].mean()
 
-    # 🔬 Model preparation
-    X = df_encoded.drop("left", axis=1)
-    y = df_encoded["left"]
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+    st.markdown("### 📌 Key Metrics")
+    kpi1, kpi2, kpi3, kpi4, kpi5 = st.columns(5)
+    kpi1.metric("👥 Employees", f"{total_employees:,}")
+    kpi2.metric("❌ Attrition Rate", f"{attrition_rate:.2f}%")
+    kpi3.metric("😊 Avg. Satisfaction", f"{avg_satisfaction:.2f}")
+    kpi4.metric("📈 Avg. Evaluation", f"{avg_eval:.2f}")
+    kpi5.metric("📊 Avg. Projects", f"{avg_projects:.1f}")
 
-    # 💾 Load or train model
-    try:
-        model = joblib.load("xgb_model.pkl")
-        st.success("✅ Loaded pretrained XGBoost model.")
-    except:
-        model = xgb.XGBClassifier(use_label_encoder=False, eval_metric='logloss')
-        model.fit(X_train, y_train)
-        joblib.dump(model, "xgb_model.pkl")
-        st.warning("⚠️ Trained and saved new XGBoost model.")
+    if use_ai:
+        prompt = f"The HR dataset has {total_employees} employees. Attrition rate is {attrition_rate:.2f}%. Avg satisfaction is {avg_satisfaction:.2f}, evaluation {avg_eval:.2f}, and project count {avg_projects:.1f}. Provide key insights."
+        st.markdown(f"💡 **AI Insight:** {ai_commentary(prompt)}")
 
-    # 🔍 Prediction sample
-    y_pred = model.predict(X_test)
-    st.subheader("🔍 Prediction Sample")
-    st.write(pd.DataFrame({"Actual": y_test.values, "Predicted": y_pred}).head())
+    st.markdown("---")
+    st.subheader("📊 Interactive Visualizations")
 
-    # 🧠 Predict for new employee
-    st.sidebar.header("🧠 Predict a New Employee")
-    def user_input_features():
-        satisfaction_level = st.sidebar.slider('Satisfaction Level', 0.0, 1.0, 0.5)
-        last_evaluation = st.sidebar.slider('Last Evaluation', 0.0, 1.0, 0.5)
-        number_project = st.sidebar.slider('Number of Projects', 1, 10, 3)
-        average_montly_hours = st.sidebar.slider('Avg. Monthly Hours', 50, 310, 160)
-        time_spend_company = st.sidebar.slider('Years at Company', 1, 10, 3)
-        Work_accident = st.sidebar.selectbox('Work Accident', [0, 1])
-        promotion_last_5years = st.sidebar.selectbox('Promotion (Last 5 Yrs)', [0, 1])
-        Department = st.sidebar.selectbox('Department', df['Department'].unique())
-        salary = st.sidebar.selectbox('Salary Level', df['salary'].unique())
-
-        dept_encoded = label_encoders['Department'].transform([Department])[0]
-        salary_encoded = label_encoders['salary'].transform([salary])[0]
-
-        data = {
-            'satisfaction_level': satisfaction_level,
-            'last_evaluation': last_evaluation,
-            'number_project': number_project,
-            'average_montly_hours': average_montly_hours,
-            'time_spend_company': time_spend_company,
-            'Work_accident': Work_accident,
-            'promotion_last_5years': promotion_last_5years,
-            'Department': dept_encoded,
-            'salary': salary_encoded
-        }
-        return pd.DataFrame(data, index=[0])
-
-    input_df = user_input_features()
-
-    if st.sidebar.button("🚀 Predict"):
-        prediction = model.predict(input_df)[0]
-        proba = model.predict_proba(input_df)[0][1]
-
-        st.subheader("📈 Prediction Result")
-        if prediction == 1:
-            st.error(f"🔴 This employee is likely to leave. (Probability: {proba:.2f})")
-        else:
-            st.success(f"🟢 This employee is likely to stay. (Leaving Probability: {proba:.2f})")
-
-    # 📊 Visual Analytics
-    st.subheader("📉 Visual Analytics")
-
-    # 1. Satisfaction Level
-    fig1 = px.histogram(df, x="satisfaction_level", nbins=30, title="Employee Satisfaction Distribution")
+    # 1. Satisfaction Distribution
+    fig1 = px.histogram(df, x='satisfaction_level', nbins=20, title="Satisfaction Level Distribution",
+                        marginal="rug", color_discrete_sequence=['#636EFA'])
     st.plotly_chart(fig1)
     if use_ai:
-        prompt = "The histogram shows employee satisfaction levels from a healthcare organization. Describe the insights and trends."
-        st.markdown(f"💡 **AI Insight:** {generate_commentary(prompt)}")
+        prompt = "Explain trends and patterns in the satisfaction level distribution histogram of employees."
+        st.markdown(f"💡 **AI Insight:** {ai_commentary(prompt)}")
 
-    # 2. Average Monthly Hours
-    fig2 = px.box(df, y="average_montly_hours", title="Average Monthly Working Hours")
+    # 2. Scatter: Satisfaction vs Evaluation
+    fig2 = px.scatter(df, x='satisfaction_level', y='last_evaluation',
+                      color=df['left'].map({0: 'Stayed', 1: 'Left'}),
+                      title="Satisfaction vs Last Evaluation", labels={"color": "Attrition"},
+                      hover_data=['number_project', 'salary'],
+                      color_discrete_map={'Stayed': 'green', 'Left': 'red'})
     st.plotly_chart(fig2)
     if use_ai:
-        prompt = "The boxplot shows the distribution of average monthly working hours. What does it reveal about workload?"
-        st.markdown(f"💡 **AI Insight:** {generate_commentary(prompt)}")
+        prompt = "Analyze the relationship between satisfaction level and last evaluation using a scatterplot with attrition status."
+        st.markdown(f"💡 **AI Insight:** {ai_commentary(prompt)}")
 
-    # 3. Time at Company vs Turnover
-    fig3 = px.histogram(df, x="time_spend_company", color="left", barmode="group", title="Time at Company vs Turnover")
+    # 3. Department vs Attrition
+    fig3 = px.histogram(df, x='Department', color=df['left'].map({0: 'Stayed', 1: 'Left'}),
+                        title="Attrition by Department", barmode='group',
+                        labels={"color": "Attrition"},
+                        color_discrete_map={'Stayed': 'blue', 'Left': 'orange'})
     st.plotly_chart(fig3)
     if use_ai:
-        prompt = "The grouped histogram compares time spent at company with whether employees left. Provide insights."
-        st.markdown(f"💡 **AI Insight:** {generate_commentary(prompt)}")
+        prompt = "Interpret the bar chart showing attrition by department in the HR dataset."
+        st.markdown(f"💡 **AI Insight:** {ai_commentary(prompt)}")
 
-    # 4. Department vs Turnover
-    fig4 = px.histogram(df, x="Department", color="left", barmode="group", title="Turnover by Department")
+    # 4. Salary vs Attrition
+    fig4 = px.histogram(df, x='salary', color=df['left'].map({0: 'Stayed', 1: 'Left'}),
+                        title="Attrition by Salary Level", barmode='group',
+                        category_orders={"salary": ["low", "medium", "high"]},
+                        labels={"color": "Attrition"},
+                        color_discrete_map={'Stayed': 'blue', 'Left': 'orange'})
     st.plotly_chart(fig4)
     if use_ai:
-        prompt = "The bar chart shows employee turnover across departments. What trends are visible?"
-        st.markdown(f"💡 **AI Insight:** {generate_commentary(prompt)}")
+        prompt = "Analyze attrition patterns across different salary levels in the HR data bar chart."
+        st.markdown(f"💡 **AI Insight:** {ai_commentary(prompt)}")
 
-    # 5. Salary vs Turnover
-    fig5 = px.histogram(df, x="salary", color="left", barmode="group", title="Turnover by Salary Level")
+    # 5. Time Spent vs Attrition
+    fig5 = px.box(df, x='left', y='time_spend_company',
+                  color=df['left'].map({0: 'Stayed', 1: 'Left'}),
+                  title="Time Spent at Company vs Attrition",
+                  labels={'left': 'Attrition'},
+                  color_discrete_map={'Stayed': 'blue', 'Left': 'orange'})
     st.plotly_chart(fig5)
     if use_ai:
-        prompt = "The bar chart illustrates turnover by salary level. Describe any patterns or risks."
-        st.markdown(f"💡 **AI Insight:** {generate_commentary(prompt)}")
+        prompt = "Describe the relationship between time spent at the company and attrition status in the boxplot."
+        st.markdown(f"💡 **AI Insight:** {ai_commentary(prompt)}")
+
+    # 6. Promotion vs Attrition
+    promo_counts = df.groupby(['promotion_last_5years', 'left']).size().unstack(fill_value=0)
+    promo_fig = go.Figure(data=[
+        go.Bar(name='Stayed', x=[str(i) for i in promo_counts.index], y=promo_counts[0], marker_color='blue'),
+        go.Bar(name='Left', x=[str(i) for i in promo_counts.index], y=promo_counts[1], marker_color='orange')
+    ])
+    promo_fig.update_layout(title="Promotions in Last 5 Years vs Attrition", barmode='group', xaxis_title="Promoted")
+    st.plotly_chart(promo_fig)
+    if use_ai:
+        prompt = "Analyze how receiving a promotion in the last 5 years is related to employee attrition."
+        st.markdown(f"💡 **AI Insight:** {ai_commentary(prompt)}")
+
+    # 7. Work Accident vs Attrition
+    acc_counts = df.groupby(['Work_accident', 'left']).size().unstack(fill_value=0)
+    acc_fig = go.Figure(data=[
+        go.Bar(name='Stayed', x=[str(i) for i in acc_counts.index], y=acc_counts[0], marker_color='green'),
+        go.Bar(name='Left', x=[str(i) for i in acc_counts.index], y=acc_counts[1], marker_color='red')
+    ])
+    acc_fig.update_layout(title="Work Accident vs Attrition", barmode='group', xaxis_title="Had Work Accident")
+    st.plotly_chart(acc_fig)
+    if use_ai:
+        prompt = "What does the data say about the correlation between work accidents and employee attrition?"
+        st.markdown(f"💡 **AI Insight:** {ai_commentary(prompt)}")
+
+    # 8. Correlation Heatmap
+    corr = df.corr(numeric_only=True)
+    heatmap_fig = go.Figure(
+        data=go.Heatmap(
+            z=corr.values,
+            x=corr.columns,
+            y=corr.columns,
+            colorscale='RdBu',
+            zmin=-1, zmax=1,
+            colorbar_title="Correlation"
+        )
+    )
+    heatmap_fig.update_layout(title="Correlation Heatmap", xaxis_showgrid=False, yaxis_showgrid=False)
+    st.plotly_chart(heatmap_fig)
+    if use_ai:
+        prompt = "Explain the most important correlations visible in this HR dataset heatmap."
+        st.markdown(f"💡 **AI Insight:** {ai_commentary(prompt)}")
 
 else:
-    st.info("📥 Please upload a CSV file to get started.")
+    st.info("👈 Please upload a CSV file to begin analysis.")
